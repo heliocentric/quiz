@@ -44,9 +44,10 @@ fail() {
 }
 trap fail ERR
 
-RUNDIR=$(realpath $(dirname $0))
-source $RUNDIR/quiz-config
-source $RUNDIR/quiz-lib
+export QUIZ_INSTALLDIR=$(realpath $(dirname $0))
+
+source $QUIZ_INSTALLDIR/quiz-config
+source $QUIZ_INSTALLDIR/quiz-lib
 
 opt_arch=""
 opt_kernel=""
@@ -74,9 +75,9 @@ quiz_debian_vars
 quiz_kernel_best_available ${opt_kernel:-$QUIZ_KERNEL_VERSION}
 
 # create init dir and install second stage
-rm -rf $RUNDIR/system/init
-mkdir -p $RUNDIR/system/init/.quiz
-install -m 755 $RUNDIR/init/init2 $RUNDIR/system/init/.quiz/init2
+rm -rf $QUIZ_RUNDIR/system/init
+mkdir -p $QUIZ_RUNDIR/system/init/.quiz
+install -m 755 $QUIZ_INSTALLDIR/init/init2 $QUIZ_RUNDIR/system/init/.quiz/init2
 
 # rc selection
 rc=${opt_rc:-$QUIZ_RC}
@@ -86,23 +87,23 @@ if [[ -z $rc || $rc = 'auto' ]] ; then
     rc=tmux
   fi
 fi
-if [[ ! -d $RUNDIR/rc/$rc ]] ; then
+if [[ ! -d $QUIZ_INSTALLDIR/rc/$rc ]] ; then
   fail "unknown rc: $rc"
 fi
 trace "using rc: $rc"
-if [[ -r $RUNDIR/rc/$rc/vars ]] ; then
-    source $RUNDIR/rc/$rc/vars
+if [[ -r $QUIZ_INSTALLDIR/rc/$rc/vars ]] ; then
+    source $QUIZ_INSTALLDIR/rc/$rc/vars
 fi
-rsync -a $RUNDIR/rc/$rc/ $RUNDIR/system/init/.quiz/rc
-cp $RUNDIR/rc/bashrc $RUNDIR/system/init/.quiz/rc
+rsync -a $QUIZ_INSTALLDIR/rc/$rc/ $QUIZ_RUNDIR/system/init/.quiz/rc
+cp $QUIZ_INSTALLDIR/rc/bashrc $QUIZ_RUNDIR/system/init/.quiz/rc
 
 # ensure system and user dirs exist
-mkdir -p $RUNDIR/system/{work,user,shared}
+mkdir -p $QUIZ_RUNDIR/system/{work,user,shared}
 
 # delete profile file insertions from previous runs
 # XXX maybe these should be part of .quiz and in the overlay
-find $RUNDIR/profile/*/etc -type f | cut -d/ -f3- | \
-  awk "{ print \"$RUNDIR/system/work/\" \$1 }" | \
+find $QUIZ_INSTALLDIR/profile/*/etc -type f | cut -d/ -f3- | \
+  awk "{ print \"$QUIZ_RUNDIR/system/work/\" \$1 }" | \
   xargs rm -f
 
 # get profiles set up. source the profile setup here, and build a profile init
@@ -110,64 +111,64 @@ find $RUNDIR/profile/*/etc -type f | cut -d/ -f3- | \
 profiles=$(echo ${opt_profile:-$QUIZ_PROFILE} | sed 's/,/ /g' | xargs -n1 | sort | xargs)
 if [[ $profiles ]] ; then
   for v in ${!QUIZ_@} ; do
-    echo "$v=${!v@Q}" >> $RUNDIR/system/init/.quiz/init.profile
+    echo "$v=${!v@Q}" >> $QUIZ_RUNDIR/system/init/.quiz/init.profile
   done
 fi
 for p in $profiles ; do
-  if [[ ! -d $RUNDIR/profile/$p ]] ; then
+  if [[ ! -d $QUIZ_INSTALLDIR/profile/$p ]] ; then
     fail "unknown profile: $p"
   fi
   trace "including profile: $p"
 
-  if [[ -f $RUNDIR/profile/$p/setup ]] ; then
-    source $RUNDIR/profile/$p/setup
+  if [[ -f $QUIZ_INSTALLDIR/profile/$p/setup ]] ; then
+    source $QUIZ_INSTALLDIR/profile/$p/setup
   fi
 
-  if [[ -f $RUNDIR/profile/$p/init ]] ; then
+  if [[ -f $QUIZ_INSTALLDIR/profile/$p/init ]] ; then
     echo "echo 'quiz: starting profile init: $p' >> /dev/kmsg" \
-      >> $RUNDIR/system/init/.quiz/init.profile
-    cat $RUNDIR/profile/$p/init >> $RUNDIR/system/init/.quiz/init.profile
+      >> $QUIZ_RUNDIR/system/init/.quiz/init.profile
+    cat $QUIZ_INSTALLDIR/profile/$p/init >> $QUIZ_RUNDIR/system/init/.quiz/init.profile
   fi
 
   # insert profile-specific files into /etc and /usr/local
   # XXX maybe these should be part of .quiz and in the overlay
-  if [[ -d $RUNDIR/profile/$p/etc ]] ; then
-    rsync -a $RUNDIR/profile/$p/etc/ $RUNDIR/system/work/etc/
+  if [[ -d $QUIZ_INSTALLDIR/profile/$p/etc ]] ; then
+    rsync -a $QUIZ_INSTALLDIR/profile/$p/etc/ $QUIZ_RUNDIR/system/work/etc/
   fi
-  if [[ -d $RUNDIR/profile/$p/local ]] ; then
-    rsync -a $RUNDIR/profile/$p/local/ $RUNDIR/system/work/usr/local/
+  if [[ -d $QUIZ_INSTALLDIR/profile/$p/local ]] ; then
+    rsync -a $QUIZ_INSTALLDIR/profile/$p/local/ $QUIZ_RUNDIR/system/work/usr/local/
   fi
 done
 
 # set up a run script for init to execute
 trace "creating run script"
-rm -f $RUNDIR/system/init/.quiz/run
+rm -f $QUIZ_RUNDIR/system/init/.quiz/run
 if [[ $# -ne 0 ]] ; then
-  cat <<EOF > $RUNDIR/system/init/.quiz/run
+  cat <<EOF > $QUIZ_RUNDIR/system/init/.quiz/run
 echo "quiz: starting user program" >> /dev/kmsg
 $@
 EOF
   if [[ $opt_shell ]] ; then
-    cat <<EOF >> $RUNDIR/system/init/.quiz/run
+    cat <<EOF >> $QUIZ_RUNDIR/system/init/.quiz/run
 echo "quiz: user program done, dropping to shell" >> /dev/kmsg
 /bin/bash --rcfile /.quiz/rc/bashrc
 EOF
   fi
 else
-  cat <<EOF > $RUNDIR/system/init/.quiz/run
+  cat <<EOF > $QUIZ_RUNDIR/system/init/.quiz/run
 echo "quiz: starting shell" >> /dev/kmsg
 /bin/bash --rcfile /.quiz/rc/bashrc
 EOF
 fi
-cat <<EOF >> $RUNDIR/system/init/.quiz/run
+cat <<EOF >> $QUIZ_RUNDIR/system/init/.quiz/run
 # kill kernel output on successful completion, to suppress the panic shutdown
 # crash
 echo 0 0 0 0 > /proc/sys/kernel/printk
 EOF
-chmod +x $RUNDIR/system/init/.quiz/run
+chmod +x $QUIZ_RUNDIR/system/init/.quiz/run
 
 # build environment file
-cat <<EOF > $RUNDIR/system/init/.quiz/env
+cat <<EOF > $QUIZ_RUNDIR/system/init/.quiz/env
 export QUIZ_ARCH=$_quiz_arch
 export QUIZ_KERNEL_VERSION=$_quiz_kver
 export QUIZ_PROFILES="$profiles"
@@ -254,15 +255,15 @@ $qemu_bin $qemu_machine_opts $qemu_cpu_opts \
   -device pvpanic-pci \
   -drive id=root,file=$QUIZ_ROOT_DIR/$_quiz_debian_release.$_quiz_debian_arch.ext2,format=raw,read-only=on,if=none \
   -device virtio-blk-pci,drive=root,serial=root \
-  -fsdev local,id=quiz-init,path=$RUNDIR/system/init,security_model=none,readonly=on \
+  -fsdev local,id=quiz-init,path=$QUIZ_RUNDIR/system/init,security_model=none,readonly=on \
   -device virtio-9p-pci,fsdev=quiz-init,mount_tag=quiz-init \
   -fsdev local,id=quiz-kernel,path=$_quiz_kernel_dir,security_model=none,readonly=on \
   -device virtio-9p-pci,fsdev=quiz-kernel,mount_tag=quiz-kernel \
-  -fsdev local,id=quiz-system,path=$RUNDIR/system/work,security_model=none,readonly=on \
+  -fsdev local,id=quiz-system,path=$QUIZ_RUNDIR/system/work,security_model=none,readonly=on \
   -device virtio-9p-pci,fsdev=quiz-system,mount_tag=quiz-system \
-  -fsdev local,id=quiz-user,path=$RUNDIR/system/user,security_model=none,readonly=on \
+  -fsdev local,id=quiz-user,path=$QUIZ_RUNDIR/system/user,security_model=none,readonly=on \
   -device virtio-9p-pci,fsdev=quiz-user,mount_tag=quiz-user \
-  -fsdev local,id=quiz-shared,path=$RUNDIR/system/shared,security_model=none \
+  -fsdev local,id=quiz-shared,path=$QUIZ_RUNDIR/system/shared,security_model=none \
   -device virtio-9p-pci,fsdev=quiz-shared,mount_tag=quiz-shared \
   $QUIZ_QEMU_OPTS \
 

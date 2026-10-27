@@ -20,6 +20,15 @@
 # (installed) and "source version" (source), and also vars for all the pieces
 #
 
+export QUIZ_RUNDIR=$HOME/.quiz/run
+if [ ! -d "${QUIZ_RUNDIR}" ] ; then
+    mkdir -p "${QUIZ_DIR}"
+fi
+export QUIZ_CURRENTDIR=$(pwd)
+# load user config
+if [[ -f $QUIZ_RUNDIR/quiz.cfg ]] ; then
+  source $QUIZ_RUNDIR/quiz.cfg
+fi
 # separate function for the pre-cooked parse; used by quiz-kernel
 # to request "latest in series"
 function _quiz_kernel_vars () {

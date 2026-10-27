@@ -40,9 +40,10 @@ fail() {
 }
 trap fail ERR
 
-RUNDIR=$(realpath $(dirname $0))
-source $RUNDIR/quiz-config
-source $RUNDIR/quiz-lib
+
+export QUIZ_RUNDIR=$(realpath $(dirname $0))
+source $QUIZ_RUNDIR/quiz-config
+source $QUIZ_RUNDIR/quiz-lib
 
 opt_kernel=""
 opt_old_kernels=""
@@ -61,7 +62,7 @@ do
 done
 shift $(expr $OPTIND - 1)
 
-cd $RUNDIR
+cd $QUIZ_RUNDIR
 
 if [[ -n $opt_kernel && -n $opt_old_kernels ]] ; then
   fail "invalid kernel version options; can't use -k and -K together"

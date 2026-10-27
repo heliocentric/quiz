@@ -34,9 +34,9 @@ fail() {
 }
 trap fail ERR
 
-RUNDIR=$(realpath $(dirname $0))
-source $RUNDIR/quiz-config
-source $RUNDIR/quiz-lib
+export QUIZ_RUNDIR=$(realpath $(dirname $0))
+source $QUIZ_RUNDIR/quiz-config
+source $QUIZ_RUNDIR/quiz-lib
 
 opt_arch=""
 

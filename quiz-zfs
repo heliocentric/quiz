@@ -37,9 +37,9 @@ fail() {
 }
 trap fail ERR
 
-RUNDIR=$(realpath $(dirname $0))
-source $RUNDIR/quiz-config
-source $RUNDIR/quiz-lib
+export QUIZ_RUNDIR=$(realpath $(dirname $0))
+source $QUIZ_RUNDIR/quiz-config
+source $QUIZ_RUNDIR/quiz-lib
 
 opt_arch=""
 opt_kernel=""
@@ -104,14 +104,14 @@ do_make() {
 do_make_install() {
   # merged /usr setup
   for d in lib lib32 lib64 bin sbin ; do
-    mkdir -p $RUNDIR/system/work/usr/$d
-    ln -sf usr/$d $RUNDIR/system/work/$d
+    mkdir -p $QUIZ_RUNDIR/system/work/usr/$d
+    ln -sf usr/$d $QUIZ_RUNDIR/system/work/$d
   done
 
-  kdest=$RUNDIR/system/work
+  kdest=$QUIZ_RUNDIR/system/work
   $QUIZ_BUILD_CMD_PREFIX make install \
     INSTALL_MOD_PATH=$kdest \
-    DESTDIR=$RUNDIR/system/work \
+    DESTDIR=$QUIZ_RUNDIR/system/work \
     "$@"
 }
 

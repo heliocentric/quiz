@@ -10,6 +10,7 @@
 # don't change this, override in quiz.cfg
 
 QUIZ_DIR=$HOME/.quiz
+
 QUIZ_KERNEL_DIR=$QUIZ_DIR/kernel
 QUIZ_ROOT_DIR=$QUIZ_DIR/root
 
@@ -44,10 +45,5 @@ QUIZ_BLOCKDEV_SIZE=100M
 QUIZ_MEMDEV_COUNT=7
 QUIZ_MEMDEV_SIZE=100M
 
-# load user config
-RUNDIR=$(realpath $(dirname $0))
-if [[ -f $RUNDIR/quiz.cfg ]] ; then
-  source $RUNDIR/quiz.cfg
-fi
 
 # vim: ft=bash

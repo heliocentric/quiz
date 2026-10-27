@@ -49,9 +49,9 @@ fail() {
 }
 trap fail ERR
 
-RUNDIR=$(realpath $(dirname $0))
-source $RUNDIR/quiz-config
-source $RUNDIR/quiz-lib
+export QUIZ_INSTALLDIR=$(realpath $(dirname $0))
+source $QUIZ_INSTALLDIR/quiz-config
+source $QUIZ_INSTALLDIR/quiz-lib
 
 opt_arch=""
 opt_kernel=""
@@ -90,7 +90,7 @@ shift $(expr $OPTIND - 1)
 
 quiz_arch_vars ${opt_arch:-$QUIZ_ARCH}
 
-cd $RUNDIR
+cd $QUIZ_RUNDIR
 
 if [[ -n $opt_kernel && -n $opt_all_kernels ]] ; then
   fail "invalid kernel version options; can't use -k and -K together"
@@ -227,7 +227,7 @@ build_kernel() {
 
   trace "preparing build: $_quiz_kver ($_quiz_ktype)"
 
-  ksrc=$RUNDIR/build/kernel/$kdir
+  ksrc=$QUIZ_RUNDIR/build/kernel/$kdir
 
   if [[ -d $ksrc ]] ; then
     trace "using existing source dir: $ksrc"
@@ -322,13 +322,13 @@ build_kernel() {
   kcfg=config-$_quiz_kmajor.$_quiz_kminor
   if [[ -z $opt_no_config ]] ; then
     found_kcfg=""
-    if [[ -f kernel/$_quiz_arch_kernel/$kcfg ]] ; then
+    if [[ -f $QUIZ_INSTALLDIR/kernel/$_quiz_arch_kernel/$kcfg ]] ; then
       found_kcfg=$kcfg
     else
-      found_kcfg=$(find kernel/$_quiz_arch_kernel/ -name "config-$_quiz_kmajor.*" | \
+      found_kcfg=$(find $QUIZ_INSTALLDIR/kernel/$_quiz_arch_kernel/ -name "config-$_quiz_kmajor.*" | \
         cut -f3 -d/ | sort -V | tail -1)
       if [[ -z $found_kcfg ]] ; then
-        found_kcfg=$(find kernel/$_quiz_arch_kernel/ -name "config-*" | \
+        found_kcfg=$(find $QUIZ_INSTALLDIR/kernel/$_quiz_arch_kernel/ -name "config-*" | \
           cut -f3 -d/ | sort -V | tail -1)
       fi
     fi
@@ -345,7 +345,7 @@ build_kernel() {
       fi
 
       trace "installing config: $found_kcfg"
-      cp kernel/$_quiz_arch_kernel/$found_kcfg $ksrc/.config
+      cp $QUIZ_INSTALLDIR/kernel/$_quiz_arch_kernel/$found_kcfg $ksrc/.config
     fi
   else
     trace "NOT installing config as requested"
