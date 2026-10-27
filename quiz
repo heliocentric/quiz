@@ -76,7 +76,7 @@ quiz_kernel_best_available ${opt_kernel:-$QUIZ_KERNEL_VERSION}
 # create init dir and install second stage
 rm -rf $RUNDIR/system/init
 mkdir -p $RUNDIR/system/init/.quiz
-install -m 755 init/init2 $RUNDIR/system/init/.quiz/init2
+install -m 755 $RUNDIR/init/init2 $RUNDIR/system/init/.quiz/init2
 
 # rc selection
 rc=${opt_rc:-$QUIZ_RC}
@@ -101,7 +101,7 @@ mkdir -p $RUNDIR/system/{work,user,shared}
 
 # delete profile file insertions from previous runs
 # XXX maybe these should be part of .quiz and in the overlay
-find profile/*/etc -type f | cut -d/ -f3- | \
+find $RUNDIR/profile/*/etc -type f | cut -d/ -f3- | \
   awk "{ print \"$RUNDIR/system/work/\" \$1 }" | \
   xargs rm -f
 
